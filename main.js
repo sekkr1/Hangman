@@ -10,7 +10,7 @@ let app = express();
 let http = require('http').Server(app);
 let io = require('socket.io')(http);
 let mysql = require('mysql2/promise');
-let pool  = mysql.createPool("mysql://h8adlys5otnbkj63:e873qhiupni8yztj@gi6kn64hu98hy0b6.chr7pe7iynqr.eu-west-1.rds.amazonaws.com:3306/yoe046niwqyicwb7");
+let pool  = mysql.createPool(process.env.JAWSDB_URL);
 
 app.use(express.static('public'));
 
@@ -34,5 +34,5 @@ io.on('connection', function(socket){
 })
 
 http.listen(process.env.PORT || 3000, function() {
-    console.log('listening on *:80');
+    console.log("Express server listening on port %d in %s mode", this.address().port, app.settings.env);
 })
