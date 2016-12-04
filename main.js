@@ -10,7 +10,11 @@ let app = express();
 let http = require('http').Server(app);
 let io = require('socket.io')(http);
 let mysql = require('mysql2/promise');
-let pool  = mysql.createPool(process.env.JAWSDB_URL);
+let pool  = mysql.createPool(process.env.JAWSDB_URL || {host:"localhost",
+	user:"root",
+	password:"root",
+	database:"hangman"
+});
 
 app.use(express.static('public'));
 
