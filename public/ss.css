@@ -1,0 +1,31 @@
+#letters > input {
+    margin-left: 15px;
+    border: none;
+    width: 40px;
+    border-bottom: solid 3px #333333;
+    border-radius: 5px;
+    height: 60px;
+    font-size: 37pt;
+    padding-left: 11px;
+    background-color: whitesmoke;
+}
+
+#letters input:first-child {
+    margin-left: 0px;
+}
+
+#mistakes span {
+    font-size: 45pt;
+    color:red;
+    text-decoration: line-through;
+}
+
+.spaces {
+    width: 50px;
+    height: 10px;
+    display: inline-block;
+}
+
+#category button {
+    margin-left: 20px;
+}

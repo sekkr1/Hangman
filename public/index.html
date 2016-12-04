@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Hangman</title>
+    <script src="https://cdn.socket.io/socket.io-1.4.5.js"></script>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.1.1/jquery.min.js"></script>
+    <!--Import Google Icon Font-->
+    <link href="http://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <!-- Compiled and minified CSS -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/materialize/0.97.8/css/materialize.min.css">
+
+    <!-- Compiled and minified JavaScript -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/materialize/0.97.8/js/materialize.min.js"   media="screen,projection"></script>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <link rel="stylesheet" href="ss.css">
+
+</head>
+<body>
+<div class="blue-grey indigo-text card " >
+    <div class="card-content white-text">
+    <span class="card-title"><h2>Hangman</h2></span>
+    </div>
+</div>
+<div id="wrapper" class="container center-align">
+    <div class="row">
+        <div class="col l10 offset-l1">
+            <div id="categoryWrapper" class="card red darken-4 z-depth-5">
+                <div class="card-content white-text">
+                    <span class="card-title">Choose a category</span>
+                </div>
+                <div class="card-action">
+                    <form  id="category" action="">
+                    </form>
+                </div>
+            </div>
+            <div id="guessWrapper" style="display:none" class="card red darken-4 z-depth-5">
+                <div class="card-content">
+                    <img src="images/hangman0.png" width="200px">
+                    <div id="letters">
+
+                    </div>
+                    <div id="mistakes">
+                    </div>
+                </div>
+                <div class="card-action">
+                    <form id="guess">
+                    <div class="input-field inline">
+                        <input id="guessLetter" type="text" pattern="\w+" minlength="1" maxlength="1" class="validate center-align" style="font-size:26pt;width:150px;">
+                        <label for="guess">Enter your guess</label>
+
+                    </div>
+                    <button class="btn-floating btn-large waves-effect waves-light red" type="submit"><i class="material-icons right">send</i>
+                    </button>
+                    </form>
+                    <a id="ng" class="btn-large waves-effect waves-light red">New game</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<div id="victory" class="modal">
+    <div class="modal-content">
+        <h4>You won!</h4>
+    </div>
+    <div class="modal-footer">
+        <a class=" modal-action modal-close waves-effect waves-green btn-flat">Yay :D</a>
+    </div>
+</div>
+<div id="loss" class="modal">
+    <div class="modal-content">
+        <h4>You lost!</h4>
+    </div>
+    <div class="modal-footer">
+        <a class=" modal-action modal-close waves-effect waves-green btn-flat">Okay ;(</a>
+    </div>
+</div>
+<script>
+    $('.modal').modal();
+    var socket = io();
+    var mistakes = []
+    var letters=[]
+    var length=0,obtainedLength=0
+    $("#ng").click(resetGame)
+    $('#category').submit(function () {
+        socket.emit("category", $("button[type=submit][clicked=true]").val())
+        return false
+    })
+    function resetGame(){
+        mistakes = []
+        letters=[]
+        length=0,obtainedLength=0
+        $('#guessWrapper').css("display", "none")
+        $('#categoryWrapper').css("display", "block")
+        $("#letters").empty()
+        socket.socket.reconnect()
+    }
+    socket.on("disconnect",function() {
+        resetGame()
+    })
+    socket.on('categories', function (msg) {
+        $("#category").empty()
+        msg.forEach(function (cat) {
+            $('#category').append($(`<button type="submit" value="${cat}" class="waves-effect waves-light btn">${cat}</button>`));
+        })
+    })
+    function sendGuess(){
+        if($("#guessLetter").val().length>0)
+            if (letters.includes($("#guessLetter").val().toLowerCase())) Materialize.toast("You already guessed that letter", 4000)
+            else if (mistakes.includes($("#guessLetter").val().toLowerCase()))  Materialize.toast("You already made that mistake", 4000)
+            else {
+                socket.emit("guess", $("#guessLetter").val().toLowerCase())
+            }
+        $("#guessLetter").val("")
+    }
+    socket.on('structure', function (msg) {
+        for (var i = 0; i < msg["length"]; i++) {
+            if (msg["spaces"].includes(i))$("#letters").append($("<span class='spaces'></span>"))
+            else {$("#letters").append($('<input type="text" disabled/>'))
+                length++}
+        }
+        var oldHeight = $("#wrapper").height();
+        $('#categoryWrapper').css("display", "none")
+        $('#guessWrapper').css("display", "block")
+        var newHeight = $("#wrapper").height();
+        $("#wrapper").height(oldHeight);
+        $("#wrapper").animate({height: newHeight+20}, 'slow', function() {
+            $("#wrapper").height('auto');
+        });
+        $("#guessLetter").focus()
+    })
+    $("#guess").submit(function () {
+        sendGuess()
+        return false
+    })
+    socket.on("locations", function (locations) {
+        letters.push(locations["letter"])
+        locations["locations"].forEach(function (loc) {
+            $letter =  $("#letters").find("input").eq(loc)
+            $letter.val((!$letter.prev().is("input")) ? locations["letter"].toUpperCase() : locations["letter"])
+            obtainedLength++
+        })
+        if(obtainedLength>=length){
+            $("#guessLetter").attr("disabled",true)
+            $("#victory").modal("open")
+        }
+    })
+    socket.on("mistake", function (letter) {
+        mistakes.push(letter)
+        $("#mistakes").append($(`<span>${letter.toUpperCase()}<span/>`))
+        $("#mistakes").append($(`<span class="spaces"><span/>`))
+        $("img").attr("src", $("img").attr("src").replace(/\d/, function (value) {
+            mistakeCount = parseInt(value) + 1
+            if (mistakeCount > 5) {
+                $("#guessLetter").attr("disabled",true)
+                $("#loss").modal("open")
+            }
+            return mistakeCount
+        }))
+    })
+    $("#category").on("click", "button", function () {
+        $("button[type=submit]", $(this).parents("#category")).removeAttr("clicked")
+        $(this).attr("clicked", "true")
+    })
+</script>
+</body>
+</html>
